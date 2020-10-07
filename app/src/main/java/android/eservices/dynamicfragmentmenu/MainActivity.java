@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.util.SparseArray;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -12,8 +13,16 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
+import androidx.fragment.app.ListFragment;
 
 import com.google.android.material.navigation.NavigationView;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements NavigationInterface {
 
@@ -25,7 +34,7 @@ public class MainActivity extends AppCompatActivity implements NavigationInterfa
     private SelectableNavigationView navigationView;
     private SparseArray<Fragment> fragmentArray;
     private Fragment currentFragment;
-
+    private Map<Integer, Fragment> fragmentCache= new HashMap<>();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -33,17 +42,27 @@ public class MainActivity extends AppCompatActivity implements NavigationInterfa
         setupNavigationElements();
 
 
-        //TODO Restore instance state
+        //Restore instance state
         //If available :
-        //1° - Retrieve the stored fragment from the saved bundle (see SO link in indications below, bottom of the class)
-        //2° - Use the replace fragment to display the retrieved fragment
-        //3° - Add the restored fragment to the cache so it is not recreated when selected the menu item again
-        //If the bundle is null, then display the default fragment using navigationView.setSelectedItem();
-        //Reminder, to get a menu item, use navigationView.getMenu().getItem(idex)
+        if (savedInstanceState != null) {
+            //1° - Retrieve the stored fragment from the saved bundle (see SO link in indications below, bottom of the class)
+            //Restore the fragment's instance
+            currentFragment = getSupportFragmentManager().getFragment(savedInstanceState, "currentFragment");
+            //2° - Use the replace fragment to display the retrieved fragment
+            replaceFragment(currentFragment);
+            //3° - Add the restored fragment to the cache so it is not recreated when selected the menu item again
+            //TODO currentFragment.getId() != R.id.favorites
+            fragmentCache.put(currentFragment.getId(),currentFragment);
+        }else{
+            //If the bundle is null, then display the default fragment using navigationView.setSelectedItem();
+            //Reminder, to get a menu item, use navigationView.getMenu().getItem(idex)
+            navigationView.setSelectedItem(navigationView.getMenu().getItem(0));
+        }
 
+        //TODO
         //Let's imagine we retrieve the stored counter state, before creating the favorite Fragment
         //and then be able to update and manage its state.
-        updateFavoriteCounter(3);
+        //updateFavoriteCounter(3);
     }
 
     @Override
@@ -66,25 +85,52 @@ public class MainActivity extends AppCompatActivity implements NavigationInterfa
         navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
-                //TODO react according to the selected item menu
+                //react according to the selected item menu
                 //We need to display the right fragment according to the menu item selection.
                 //Any created fragment must be cached so it is only created once.
                 //You need to implement this "cache" manually : when you create a fragment based on the menu item,
                 //store it the way you prefer, so when you select this menu item later, you first check if the fragment already exists
                 //and then you use it. If the fragment doesn't exist (it is not cached then) you get an instance of it and store it in the cache.
 
+                int id = menuItem.getItemId();
+                Fragment fragment = null;
 
-                //TODO when we select logoff, I want the Activity to be closed (and so the Application, as it has only one activity)
+                if (id == R.id.list) {
+                    if(!fragmentCache.containsKey(R.id.list)){
+                        fragmentCache.put(R.id.list,new ListFragment());
+                    }
+                    fragment = fragmentCache.get(R.id.list);
+                }else if (id == R.id.favorites) {
+                    if(!fragmentCache.containsKey(R.id.favorites)){
+                        fragmentCache.put(R.id.favorites,new FavoritesFragment());
+                    }
+                    fragment = fragmentCache.get(R.id.favorites);
+                }
+
+                if (fragment != null) {
+                    replaceFragment(fragment);
+                }
+
+                //when we select logoff, I want the Activity to be closed (and so the Application, as it has only one activity)
+                if (id == R.id.logoff) {
+                    logoff();
+                }
 
                 //check in the doc what this boolean means and use it the right way ...
-                return false;
+                return true;
             }
         });
     }
 
 
     private void replaceFragment(Fragment newFragment) {
-        //TODO replace fragment inside R.id.fragment_container using a FragmentTransaction
+        //replace fragment inside R.id.fragment_container using a FragmentTransaction
+        currentFragment=newFragment;
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        fragmentTransaction.replace(R.id.fragment_container, newFragment);
+        fragmentTransaction.addToBackStack(null);
+        fragmentTransaction.commit();
     }
 
     private void logoff() {
@@ -106,9 +152,14 @@ public class MainActivity extends AppCompatActivity implements NavigationInterfa
     }
 
 
-    //TODO saveInstanceState to handle
-    //TODO first save the currently displayed fragment index using the key FRAGMENT_NUMBER_KEY, and getOrder() on the menu item
-    //Reminder, to get the selected item in the menu, we can use myNavView.getCheckedItem()
-    //TODO then save the current state of the fragment, you may read https://stackoverflow.com/questions/15313598/once-for-all-how-to-correctly-save-instance-state-of-fragments-in-back-stack
-
+    //saveInstanceState to handle
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        //first save the currently displayed fragment index using the key FRAGMENT_NUMBER_KEY, and getOrder() on the menu item
+        //Reminder, to get the selected item in the menu, we can use myNavView.getCheckedItem()
+        outState.putInt("FRAGMENT_NUMBER_KEY", navigationView.getCheckedItem().getOrder());
+        //then save the current state of the fragment, you may read https://stackoverflow.com/questions/15313598/once-for-all-how-to-correctly-save-instance-state-of-fragments-in-back-stack
+        getSupportFragmentManager().putFragment(outState, "currentFragment", currentFragment);
+    }
 }
