@@ -67,6 +67,12 @@ public class FavoritesFragment extends Fragment {
         }
         //finally call refreshCounter to update the display
         refreshCounter();
+
+        MainActivity main = (MainActivity) getActivity();
+        if(!main.getFragmentCache().containsKey(R.id.favorites)){
+            main.getFragmentCache().put(R.id.favorites,this);
+        }
+
     }
 
     private void setupButtons() {

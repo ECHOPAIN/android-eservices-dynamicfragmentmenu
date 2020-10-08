@@ -34,6 +34,11 @@ public class MainActivity extends AppCompatActivity implements NavigationInterfa
     private SelectableNavigationView navigationView;
     private SparseArray<Fragment> fragmentArray;
     private Fragment currentFragment;
+
+    public Map<Integer, Fragment> getFragmentCache() {
+        return fragmentCache;
+    }
+
     private Map<Integer, Fragment> fragmentCache= new HashMap<>();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,8 +56,7 @@ public class MainActivity extends AppCompatActivity implements NavigationInterfa
             //2° - Use the replace fragment to display the retrieved fragment
             replaceFragment(currentFragment);
             //3° - Add the restored fragment to the cache so it is not recreated when selected the menu item again
-            //TODO currentFragment.getId() != R.id.favorites
-            fragmentCache.put(currentFragment.getId(),currentFragment);
+            //Done in favoritesFragment onActivityCreated
         }else{
             //If the bundle is null, then display the default fragment using navigationView.setSelectedItem();
             //Reminder, to get a menu item, use navigationView.getMenu().getItem(idex)
@@ -101,7 +105,10 @@ public class MainActivity extends AppCompatActivity implements NavigationInterfa
                     }
                     fragment = fragmentCache.get(R.id.list);
                 }else if (id == R.id.favorites) {
+                    System.out.println("favorite selected");
+
                     if(!fragmentCache.containsKey(R.id.favorites)){
+                        System.out.println("favorite created!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
                         fragmentCache.put(R.id.favorites,new FavoritesFragment());
                     }
                     fragment = fragmentCache.get(R.id.favorites);
